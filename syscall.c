@@ -13,12 +13,14 @@
 // library system call function. The saved user %esp points
 // to a saved program counter, and then the first argument.
 
+// VARIABLE GLOBAL PARA ACTIVAR/DESACTIVAR RASTREO
+int syscall_trace = 0;
+
 // Fetch the int at addr from the current process.
 int
 fetchint(uint addr, int *ip)
 {
   struct proc *curproc = myproc();
-
   if(addr >= curproc->sz || addr+4 > curproc->sz)
     return -1;
   *ip = *(int*)(addr);
@@ -60,7 +62,6 @@ argptr(int n, char **pp, int size)
 {
   int i;
   struct proc *curproc = myproc();
- 
   if(argint(n, &i) < 0)
     return -1;
   if(size < 0 || (uint)i >= curproc->sz || (uint)i+size > curproc->sz)
@@ -103,29 +104,57 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+extern int sys_trace(void);
+
+// ARREGLO CON LOS NOMBRES DE TODAS LAS SYSCALLS
+char *syscallnames[] = {
+  [SYS_fork]    "fork",
+  [SYS_exit]    "exit",
+  [SYS_wait]    "wait",
+  [SYS_pipe]    "pipe",
+  [SYS_read]    "read",
+  [SYS_kill]    "kill",
+  [SYS_exec]    "exec",
+  [SYS_fstat]   "fstat",
+  [SYS_chdir]   "chdir",
+  [SYS_dup]     "dup",
+  [SYS_getpid]  "getpid",
+  [SYS_sbrk]    "sbrk",
+  [SYS_sleep]   "sleep",
+  [SYS_uptime]  "uptime",
+  [SYS_open]    "open",
+  [SYS_write]   "write",
+  [SYS_mknod]   "mknod",
+  [SYS_unlink]  "unlink",
+  [SYS_link]    "link",
+  [SYS_mkdir]   "mkdir",
+  [SYS_close]   "close",
+  [SYS_trace]   "trace",
+};
 
 static int (*syscalls[])(void) = {
-[SYS_fork]    sys_fork,
-[SYS_exit]    sys_exit,
-[SYS_wait]    sys_wait,
-[SYS_pipe]    sys_pipe,
-[SYS_read]    sys_read,
-[SYS_kill]    sys_kill,
-[SYS_exec]    sys_exec,
-[SYS_fstat]   sys_fstat,
-[SYS_chdir]   sys_chdir,
-[SYS_dup]     sys_dup,
-[SYS_getpid]  sys_getpid,
-[SYS_sbrk]    sys_sbrk,
-[SYS_sleep]   sys_sleep,
-[SYS_uptime]  sys_uptime,
-[SYS_open]    sys_open,
-[SYS_write]   sys_write,
-[SYS_mknod]   sys_mknod,
-[SYS_unlink]  sys_unlink,
-[SYS_link]    sys_link,
-[SYS_mkdir]   sys_mkdir,
-[SYS_close]   sys_close,
+  [SYS_fork]    sys_fork,
+  [SYS_exit]    sys_exit,
+  [SYS_wait]    sys_wait,
+  [SYS_pipe]    sys_pipe,
+  [SYS_read]    sys_read,
+  [SYS_kill]    sys_kill,
+  [SYS_exec]    sys_exec,
+  [SYS_fstat]   sys_fstat,
+  [SYS_chdir]   sys_chdir,
+  [SYS_dup]     sys_dup,
+  [SYS_getpid]  sys_getpid,
+  [SYS_sbrk]    sys_sbrk,
+  [SYS_sleep]   sys_sleep,
+  [SYS_uptime]  sys_uptime,
+  [SYS_open]    sys_open,
+  [SYS_write]   sys_write,
+  [SYS_mknod]   sys_mknod,
+  [SYS_unlink]  sys_unlink,
+  [SYS_link]    sys_link,
+  [SYS_mkdir]   sys_mkdir,
+  [SYS_close]   sys_close,
+  [SYS_trace]   sys_trace,
 };
 
 void
@@ -135,6 +164,12 @@ syscall(void)
   struct proc *curproc = myproc();
 
   num = curproc->tf->eax;
+  
+  // SI EL RASTREO ESTÁ ACTIVADO, MOSTRAR INFORMACIÓN DE LA SYSCALL
+  if(syscall_trace && num > 0 && num < NELEM(syscallnames) && syscallnames[num]) {
+    cprintf("[TRACE] PID %d: %s\n", curproc->pid, syscallnames[num]);
+  }
+
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     curproc->tf->eax = syscalls[num]();
   } else {

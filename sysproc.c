@@ -30,7 +30,6 @@ int
 sys_kill(void)
 {
   int pid;
-
   if(argint(0, &pid) < 0)
     return -1;
   return kill(pid);
@@ -47,7 +46,6 @@ sys_sbrk(void)
 {
   int addr;
   int n;
-
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
@@ -61,7 +59,6 @@ sys_sleep(void)
 {
   int n;
   uint ticks0;
-
   if(argint(0, &n) < 0)
     return -1;
   acquire(&tickslock);
@@ -83,9 +80,32 @@ int
 sys_uptime(void)
 {
   uint xticks;
-
   acquire(&tickslock);
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// NUEVA SYSCALL PARA ACTIVAR/DESACTIVAR EL RASTREO
+// Recibe un parámetro: 1 para activar, 0 para desactivar
+extern int syscall_trace;
+
+int
+sys_trace(void)
+{
+  int mode;
+  if(argint(0, &mode) < 0)
+    return -1;
+  
+  if(mode == 0) {
+    syscall_trace = 0;
+    cprintf("Syscall tracing DESACTIVADO\n");
+  } else if(mode == 1) {
+    syscall_trace = 1;
+    cprintf("Syscall tracing ACTIVADO\n");
+  } else {
+    return -1;
+  }
+  
+  return 0;
 }
